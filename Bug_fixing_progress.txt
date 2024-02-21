@@ -1,0 +1,76 @@
+1. Lỗi date format với tạo tên user ngẫu nhiên - done
+Fix: chỉnh lại format ngày giờ của máy tính thành dd/MM/yyyy
+
+2. Không hiện mã vạch của sản phẩm trên textfield trong quản lý sản phẩm - Done
+
+	++GUI :Khi nhấn vào datagridview:
+		Thêm vào hàm dataGridViewProduct_CellClick
+	this.hrjTextBox1.Text = productBUS.getBarcode(row.Cells[1].Value.ToString());
+
+	++BUS  : Thêm hàm sau
+		        public string getBarcode(string productID)
+        		{
+		            return ProductDAO.getBarcode(productID);
+		        }
+
+	++DAO  : Thêm hàm sau:
+	public string getBarcode(string productID)
+        {
+            SqlConnection con = DatabaseHelper.getConnection();
+            string barcode = "";
+            try
+            {
+                con.Open();
+                SqlCommand cmd = new SqlCommand($"select Barcode from Product where ProductId = '{productID}'", con);
+                // Khai báo DataTable để lưu kết quả từ câu truy vấn
+                DataTable dt = new DataTable();
+                SqlDataAdapter adp = new SqlDataAdapter(cmd);
+                adp.Fill(dt);
+                // Kiểm tra xem có bất kỳ dòng dữ liệu nào được trả về hay không
+                if (dt.Rows.Count > 0)
+                {
+                    // Nếu có dòng dữ liệu được trả về, lấy giá trị barcode từ cột đầu tiên của dòng đó
+                    barcode = dt.Rows[0]["Barcode"].ToString();
+                }
+            }
+            catch (SqlException ex)
+            {
+                // In lỗi ra console để kiểm tra và gỡ rối
+                Console.WriteLine($"SQL Exception: {ex.Message}");
+                return null;
+            }
+            finally
+            {
+                con.Close();
+            }
+            return barcode;
+        }
+3. Bỏ số thập phân - done: đổi c2 thành c0
+        public void designSomeColumsOfDataGridView()
+        {
+            //display vnd money to some column of datagridview
+            this.dataGridViewProduct.Columns["productImportPrice"].DefaultCellStyle.Format = "c0";
+            this.dataGridViewProduct.Columns["productImportPrice"].DefaultCellStyle.FormatProvider = CultureInfo.GetCultureInfo("vi-VN");
+            this.dataGridViewProduct.Columns["productPriceToSell"].DefaultCellStyle.Format = "c0";
+            this.dataGridViewProduct.Columns["productPriceToSell"].DefaultCellStyle.FormatProvider = CultureInfo.GetCultureInfo("vi-VN");
+        }
+
+
+4. Đồng bộ sản phẩm của nhà cung cấp (vd: nhà cung cấp sữa chỉ cung cấp sữa chứ không cung cấp dầu ăn...)
+
+Hướng fix:
+- Thêm 1 cột SupplierID vào bảng Product - (done)
+- Viết hàm tìm product dựa vào SupplierID: getProductBySupplierID(string supplierId) ở lớp DAO, BUS
+- Trong giao diện nhập hàng, khi chưa chọn nhà cung cấp thì ô tìm kiếm sp không bấm vô được.
+- Khi chọn nhà cung cấp rồi thì lấy ra SupplierID.
+- Ở ô tìm kiếm thì dùng hàm đã tạo ở trên để lấy ra danh sách sản phẩm chứ không phải là lấy all như phiên bản cũ.
+
+5. Giá tiền phiếu nhập tương ứng với phiếu chi
+
+Hướng fix:
+- Thay vì nhập mã phiếu nhập bằng tay thì làm ra cái combobox xổ xuống để chọn:
+	+ Viết hàm lấy tất cả mã phiếu nhập.
+	+ Chỉnh sửa giao diện từ textfield thành combobox.
+	+ Dữ liệu combobox lấy từ hàm đã viết ở trên.
+- Giá tiền thì vẫn giữ nguyên nhập tay bởi vì cửa hàng có thể thanh toán với nhà cung cấp nhiều lần (không nhất thiết phải trả đủ trong 1 lần).
+Có thể sẽ có sự khác biệt giữa giá phiếu nhập và phiếu chi nên quản lý sẽ phải kiểm tra định kỳ cuối ngày hoặc cuối tuần.
